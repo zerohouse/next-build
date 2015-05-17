@@ -1,0 +1,19 @@
+{
+  "right": {
+    "ALLMighty": "#rootUser",
+    // 다른 오브젝트를 참조시 #으로 아이디 지정
+    "newBoard": "#Users.operators"
+  },
+  "Users": {
+    "rootUser": {
+      "email": "user1@gmail.com",
+      "gender": "m"
+    }
+  },
+  "operators": [
+    "goo@ggo.com",
+    "goo3@ggo.com",
+    "goo4@ggo.com",
+    "goo5@ggo.com"
+  ]
+}
