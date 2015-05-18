@@ -27,6 +27,8 @@ public class InstancePool {
 	private Set<Class<?>> classLevel;
 	private Set<Class<?>> fieldLevel;
 
+	private Map<Class<?>, Set<Object>> annotationMap;
+
 	private String basePackage;
 
 	public InstancePool(String basePackage) throws TypeDuplicateException {
@@ -36,10 +38,15 @@ public class InstancePool {
 		buildMap = new BuildMap(basePackage);
 		this.basePackage = basePackage;
 		instanceMap = new ConcurrentHashMap<Class<?>, Object>();
+		annotationMap = new ConcurrentHashMap<Class<?>, Set<Object>>();
 	}
 
 	public Object getInstance(Class<?> type) {
 		return instanceMap.get(type);
+	}
+
+	public Set<Object> getAnnotatedInstance(Class<?> type) {
+		return annotationMap.get(type);
 	}
 
 	public Object getInstance(Method method) {
@@ -72,24 +79,34 @@ public class InstancePool {
 	public void build() {
 		Reflections ref = new Reflections(basePackage, new SubTypesScanner(), new TypeAnnotationsScanner(), new FieldAnnotationsScanner(),
 				new MethodAnnotationsScanner());
-		Set<Class<?>> allTypes = new HashSet<Class<?>>();
 		classLevel.forEach(annotation -> {
-			allTypes.addAll(ref.getTypesAnnotatedWith((Class<? extends Annotation>) annotation));
+			annotationMap.put(annotation, new HashSet<Object>());
+			ref.getTypesAnnotatedWith((Class<? extends Annotation>) annotation).forEach(type -> {
+				Object obj = Parser.newInstance(type);
+				buildFields(type, obj);
+				instanceMap.put(type, obj);
+				annotationMap.get(annotation).add(obj);
+			});
 		});
 		methodLevel.forEach(annotation -> {
+			annotationMap.put(annotation, new HashSet<Object>());
 			ref.getMethodsAnnotatedWith((Class<? extends Annotation>) annotation).forEach(method -> {
-				allTypes.add(method.getDeclaringClass());
+				Class<?> type = method.getDeclaringClass();
+				Object obj = Parser.newInstance(type);
+				buildFields(type, obj);
+				instanceMap.put(type, obj);
+				annotationMap.get(annotation).add(obj);
 			});
 		});
 		fieldLevel.forEach(annotation -> {
+			annotationMap.put(annotation, new HashSet<Object>());
 			ref.getFieldsAnnotatedWith((Class<? extends Annotation>) annotation).forEach(method -> {
-				allTypes.add(method.getDeclaringClass());
+				Class<?> type = method.getDeclaringClass();
+				Object obj = Parser.newInstance(type);
+				buildFields(type, obj);
+				instanceMap.put(type, obj);
+				annotationMap.get(annotation).add(obj);
 			});
-		});
-		allTypes.forEach(type -> {
-			Object obj = Parser.newInstance(type);
-			buildFields(type, obj);
-			instanceMap.put(type, obj);
 		});
 	}
 
