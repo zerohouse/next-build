@@ -23,16 +23,16 @@ public class InstancePool {
 
 	private BuildMap buildMap;
 
-	private Set<Annotation> methodLevel;
-	private Set<Annotation> classLevel;
-	private Set<Annotation> fieldLevel;
+	private Set<Class<?>> methodLevel;
+	private Set<Class<?>> classLevel;
+	private Set<Class<?>> fieldLevel;
 
 	private String basePackage;
 
 	public InstancePool(String basePackage) throws TypeDuplicateException {
-		methodLevel = new HashSet<Annotation>();
-		classLevel = new HashSet<Annotation>();
-		fieldLevel = new HashSet<Annotation>();
+		methodLevel = new HashSet<Class<?>>();
+		classLevel = new HashSet<Class<?>>();
+		fieldLevel = new HashSet<Class<?>>();
 		buildMap = new BuildMap(basePackage);
 		this.basePackage = basePackage;
 		instanceMap = new ConcurrentHashMap<Class<?>, Object>();
@@ -50,38 +50,39 @@ public class InstancePool {
 		return instanceMap.get(field.getDeclaringClass());
 	}
 
-	public void addMethodAnnotations(Annotation... annotations) {
-		for (int i = 0; i < annotations.length; i++) {
-			methodLevel.add(annotations[i]);
+	public void addMethodAnnotations(Class<?>... classes) {
+		for (int i = 0; i < classes.length; i++) {
+			methodLevel.add(classes[i]);
 		}
 	}
 
-	public void addClassAnnotations(Annotation... annotations) {
-		for (int i = 0; i < annotations.length; i++) {
-			classLevel.add(annotations[i]);
+	public void addClassAnnotations(Class<?>... classes) {
+		for (int i = 0; i < classes.length; i++) {
+			classLevel.add(classes[i]);
 		}
 	}
 
-	public void addFieldAnnotations(Annotation... annotations) {
-		for (int i = 0; i < annotations.length; i++) {
-			fieldLevel.add(annotations[i]);
+	public void addFieldAnnotations(Class<?>... classes) {
+		for (int i = 0; i < classes.length; i++) {
+			fieldLevel.add(classes[i]);
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	public void build() {
 		Reflections ref = new Reflections(basePackage, new SubTypesScanner(), new TypeAnnotationsScanner(), new FieldAnnotationsScanner(),
 				new MethodAnnotationsScanner());
 		Set<Class<?>> allTypes = new HashSet<Class<?>>();
 		classLevel.forEach(annotation -> {
-			allTypes.addAll(ref.getTypesAnnotatedWith(annotation));
+			allTypes.addAll(ref.getTypesAnnotatedWith((Class<? extends Annotation>) annotation));
 		});
 		methodLevel.forEach(annotation -> {
-			ref.getMethodsAnnotatedWith(annotation).forEach(method -> {
+			ref.getMethodsAnnotatedWith((Class<? extends Annotation>) annotation).forEach(method -> {
 				allTypes.add(method.getDeclaringClass());
 			});
 		});
 		fieldLevel.forEach(annotation -> {
-			ref.getFieldsAnnotatedWith(annotation).forEach(method -> {
+			ref.getFieldsAnnotatedWith((Class<? extends Annotation>) annotation).forEach(method -> {
 				allTypes.add(method.getDeclaringClass());
 			});
 		});
